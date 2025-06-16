@@ -1,0 +1,107 @@
+-- Digital Clock Design for DE10-Lite FPGA
+-- VHDL Code
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity Digital_Clock is
+    Port (
+        clk       : in STD_LOGIC;  -- 50 GHz clock signal
+        reset_n   : in STD_LOGIC;  -- Active low synchronous reset
+        hours     : out INTEGER range 0 to 23;
+        minutes   : out INTEGER range 0 to 59;
+        seconds   : out INTEGER range 0 to 59
+    );
+end Digital_Clock;
+
+architecture Behavioral of Digital_Clock is
+    signal sec_counter : INTEGER range 0 to 59 := 0;
+    signal min_counter : INTEGER range 0 to 59 := 0;
+    signal hr_counter  : INTEGER range 0 to 23 := 0;
+
+begin
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            if reset_n = '0' then  -- Active low reset
+                sec_counter <= 0;
+                min_counter <= 0;
+                hr_counter  <= 0;
+            else
+                if sec_counter = 59 then
+                    sec_counter <= 0;
+                    if min_counter = 59 then
+                        min_counter <= 0;
+                        if hr_counter = 23 then
+                            hr_counter <= 0;
+                        else
+                            hr_counter <= hr_counter + 1;
+                        end if;
+                    else
+                        min_counter <= min_counter + 1;
+                    end if;
+                else
+                    sec_counter <= sec_counter + 1;
+                end if;
+            end if;
+        end if;
+    end process;
+
+    hours   <= hr_counter;
+    minutes <= min_counter;
+    seconds <= sec_counter;
+
+end Behavioral;
+
+-- Testbench for Digital Clock
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity Digital_Clock_tb is
+end Digital_Clock_tb;
+
+architecture Behavioral of Digital_Clock_tb is
+    signal clk       : STD_LOGIC := '0';
+    signal reset_n   : STD_LOGIC := '1';
+    signal hours     : INTEGER range 0 to 23;
+    signal minutes   : INTEGER range 0 to 59;
+    signal seconds   : INTEGER range 0 to 59;
+
+    constant clk_period : time := 20 ns;  -- Assuming 50 GHz clock
+
+begin
+    uut: entity work.Digital_Clock
+        Port map (
+            clk => clk,
+            reset_n => reset_n,
+            hours => hours,
+            minutes => minutes,
+            seconds => seconds
+        );
+
+    clk_process : process
+    begin
+        while true loop
+            clk <= '0';
+            wait for clk_period / 2;
+            clk <= '1';
+            wait for clk_period / 2;
+        end loop;
+    end process;
+
+    stimulus_process : process
+    begin
+        -- Apply reset
+        reset_n <= '0';
+        wait for clk_period * 2;
+        reset_n <= '1';
+
+        -- Run simulation for a sufficient period
+        wait for clk_period * 5000;  -- Simulate for 5000 clock cycles
+        wait;
+    end process;
+
+end Behavioral;
